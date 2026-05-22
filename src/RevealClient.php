@@ -1,5 +1,10 @@
 <?php
 
+/*
+ * Copyright (c) 2026 MambuSRL
+ * Author: MambuSRL
+ */
+
 declare(strict_types=1);
 
 namespace MambuSRL\VerizonConnect;
@@ -11,12 +16,18 @@ use MambuSRL\VerizonConnect\Http\HttpClientInterface;
 
 final class RevealClient
 {
+    /**
+        * Creates the client with the VerizonConnect configuration and HTTP implementation to use.
+     */
     public function __construct(
         private readonly RevealConfig $config,
         private readonly HttpClientInterface $httpClient = new CurlHttpClient()
     ) {
     }
 
+    /**
+        * Retrieves the authentication token from the VerizonConnect service.
+     */
     public function getToken(): string
     {
         $authorization = base64_encode($this->config->username . ':' . $this->config->password);
@@ -41,6 +52,8 @@ final class RevealClient
     }
 
     /**
+     * Returns the list of vehicles available for the given token.
+     *
      * @return array<mixed>
      */
     public function listVehicles(string $token): array
@@ -56,6 +69,8 @@ final class RevealClient
     }
 
     /**
+     * Returns the GPS location of the vehicle identified by the vehicle number.
+     *
      * @return array<mixed>
      */
     public function getVehicleLocation(string $token, string $vehicleNumber): array
@@ -79,6 +94,9 @@ final class RevealClient
         return $this->decodeJson($response->body, 'vehicle location');
     }
 
+    /**
+        * Builds the Bearer authorization header required by the VerizonConnect APIs.
+     */
     private function buildBearerAuthorization(string $token): string
     {
         $token = trim($token);
@@ -89,6 +107,9 @@ final class RevealClient
         return sprintf('Atmosphere atmosphere_app_id=%s, Bearer %s', $this->config->appId, $token);
     }
 
+    /**
+        * Verifies that the HTTP response completed successfully.
+     */
     private function assertSuccess(int $statusCode, string $body): void
     {
         if ($statusCode < 200 || $statusCode > 299) {
@@ -100,6 +121,8 @@ final class RevealClient
     }
 
     /**
+     * Decodes a JSON response and validates that the format is an array.
+     *
      * @return array<mixed>
      */
     private function decodeJson(string $body, string $context): array

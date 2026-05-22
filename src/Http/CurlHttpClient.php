@@ -1,5 +1,10 @@
 <?php
 
+/*
+ * Copyright (c) 2026 MambuSRL
+ * Author: MambuSRL
+ */
+
 declare(strict_types=1);
 
 namespace MambuSRL\VerizonConnect\Http;
@@ -8,6 +13,9 @@ use MambuSRL\VerizonConnect\Exception\RevealApiException;
 
 final class CurlHttpClient implements HttpClientInterface
 {
+    /**
+        * Executes an HTTP request via cURL and returns the status code and body.
+     */
     public function request(string $method, string $url, array $headers = []): HttpResponse
     {
         $ch = curl_init();

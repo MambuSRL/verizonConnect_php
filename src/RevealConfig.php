@@ -1,11 +1,19 @@
 <?php
 
+/*
+ * Copyright (c) 2026 MambuSRL
+ * Author: MambuSRL
+ */
+
 declare(strict_types=1);
 
 namespace MambuSRL\VerizonConnect;
 
 final class RevealConfig
 {
+    /**
+        * Initializes the connection parameters and VerizonConnect endpoints.
+     */
     public function __construct(
         public readonly string $appId,
         public readonly string $username,

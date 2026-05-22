@@ -1,5 +1,10 @@
 <?php
 
+/*
+ * Copyright (c) 2026 MambuSRL
+ * Author: MambuSRL
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../src/RevealConfig.php';
@@ -25,10 +30,16 @@ final class FakeHttpClient implements HttpClientInterface
     /**
      * @param list<HttpResponse> $responses
      */
+    /**
+        * Initializes the fake client with the responses to return in sequence.
+     */
     public function __construct(private array $responses)
     {
     }
 
+    /**
+        * Records the received request and returns the next fake response.
+     */
     public function request(string $method, string $url, array $headers = []): HttpResponse
     {
         $this->requests[] = [
@@ -42,6 +53,8 @@ final class FakeHttpClient implements HttpClientInterface
 }
 
 /**
+ * Runs the library test suite.
+ *
  * @return list<array{0: string, 1: Closure(): void}>
  */
 function tests(): array
@@ -96,6 +109,9 @@ function tests(): array
     ];
 }
 
+/**
+ * Builds a test configuration with consistent fake values.
+ */
 function config(): RevealConfig
 {
     return new RevealConfig(
@@ -105,6 +121,9 @@ function config(): RevealConfig
     );
 }
 
+/**
+ * Verifies that two values are identical.
+ */
 function assertSame(mixed $expected, mixed $actual): void
 {
     if ($expected !== $actual) {
@@ -112,6 +131,9 @@ function assertSame(mixed $expected, mixed $actual): void
     }
 }
 
+/**
+ * Verifies that a boolean value is true.
+ */
 function assertTrue(bool $value): void
 {
     if ($value !== true) {
