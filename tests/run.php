@@ -23,6 +23,7 @@ use MambuSRL\VerizonConnect\Http\HttpResponse;
 use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleLocation;
 use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleStatus;
 use MambuSRL\VerizonConnect\Model\GpsHistoryByVehicleNumberResponse;
+use MambuSRL\VerizonConnect\Model\Vehicle;
 use MambuSRL\VerizonConnect\Model\VehicleDTCHistory;
 use MambuSRL\VerizonConnect\Model\VehicleECMStatus;
 use MambuSRL\VerizonConnect\Model\VehicleLocation;
@@ -86,12 +87,15 @@ function tests(): array
             assertTrue(str_starts_with($httpClient->requests[0]['headers']['Authorization'], 'Basic '));
         }],
         ['list vehicles uses cmd endpoint and atmosphere header', function (): void {
-            $httpClient = new FakeHttpClient([new HttpResponse(200, '{"items":[{"id":1}]}')]);
+            $httpClient = new FakeHttpClient([new HttpResponse(200, '[{"Name":"NomeTest","VehicleNumber":"97","RegistrationNumber":"AB11111","VIN":null,"Make":"FIAT","Year":2025,"Model":"FIAT DUCATO","TankCapacity":0,"HighwayMPG":0,"CityMPG":0,"FuelType":2,"VehicleSize":0,"HasNavigationDevice":false,"HasTachograph":false,"VehicleId":999999}]')]);
             $client = new RevealClient(config(), $httpClient);
 
             $vehicles = $client->listVehicles('token-123');
 
-            assertSame(['items' => [['id' => 1]]], $vehicles);
+            assertTrue($vehicles[0] instanceof Vehicle);
+            assertSame('NomeTest', $vehicles[0]->name);
+            assertSame('97', $vehicles[0]->vehicleNumber);
+            assertSame(999999, $vehicles[0]->vehicleId);
             assertSame('https://fim.api.eu.fleetmatics.com/cmd/v1/vehicles', $httpClient->requests[0]['url']);
             assertSame(
                 'Atmosphere atmosphere_app_id=app-id, Bearer token-123',

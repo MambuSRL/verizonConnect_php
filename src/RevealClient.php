@@ -18,6 +18,7 @@ use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleStatus;
 use MambuSRL\VerizonConnect\Model\GpsHistoryByVehicleNumberResponse;
 use MambuSRL\VerizonConnect\Model\VehicleDTCHistory;
 use MambuSRL\VerizonConnect\Model\VehicleECMStatus;
+use MambuSRL\VerizonConnect\Model\Vehicle;
 use MambuSRL\VerizonConnect\Model\VehicleLocation;
 use MambuSRL\VerizonConnect\Model\VehicleStatus;
 use MambuSRL\VerizonConnect\Model\VehiclesActiveDTC;
@@ -62,7 +63,7 @@ final class RevealClient
     /**
      * Returns the list of vehicles available for the given token.
      *
-     * @return array<mixed>
+     * @return array<int, Vehicle>
      */
     public function listVehicles(string $token): array
     {
@@ -73,7 +74,21 @@ final class RevealClient
 
         $this->assertSuccess($response->statusCode, $response->body);
 
-        return $this->decodeJson($response->body, 'vehicles');
+        $payload = $this->decodeJson($response->body, 'vehicles');
+        if (!array_is_list($payload)) {
+            $items = $payload['items'] ?? null;
+            if (!is_array($items)) {
+                throw new RevealApiException('Unexpected vehicles response format');
+            }
+
+            $payload = $items;
+        }
+
+        return $this->mapList(
+            $payload,
+            static fn (array $item): Vehicle => Vehicle::fromArray($item),
+            'vehicles'
+        );
     }
 
     /**
