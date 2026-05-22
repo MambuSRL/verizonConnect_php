@@ -29,14 +29,36 @@ final class Location
     public static function fromArray(array $data): self
     {
         return new self(
-            self::toNullableFloat($data['Latitude'] ?? null),
-            self::toNullableFloat($data['Longitude'] ?? null),
+            self::toNullableFloat($data['Latitude'] ?? $data['lat'] ?? null),
+            self::toNullableFloat($data['Longitude'] ?? $data['lng'] ?? null),
             self::toNullableString($data['AddressLine1'] ?? null),
             self::toNullableString($data['AddressLine2'] ?? null),
             self::toNullableString($data['Locality'] ?? null),
             self::toNullableString($data['AdministrativeArea'] ?? null),
             self::toNullableString($data['PostalCode'] ?? null),
             self::toNullableString($data['Country'] ?? null),
+        );
+    }
+
+    /**
+     * @param array<mixed> $data
+     */
+    public static function fromVehicleLocationArray(array $data): self
+    {
+        $address = [];
+        if (isset($data['Address']) && is_array($data['Address'])) {
+            $address = $data['Address'];
+        }
+
+        return new self(
+            self::toNullableFloat($data['Latitude'] ?? $data['lat'] ?? null),
+            self::toNullableFloat($data['Longitude'] ?? $data['lng'] ?? null),
+            self::toNullableString($address['AddressLine1'] ?? null),
+            self::toNullableString($address['AddressLine2'] ?? null),
+            self::toNullableString($address['Locality'] ?? null),
+            self::toNullableString($address['AdministrativeArea'] ?? null),
+            self::toNullableString($address['PostalCode'] ?? null),
+            self::toNullableString($address['Country'] ?? null),
         );
     }
 

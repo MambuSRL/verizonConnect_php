@@ -13,9 +13,9 @@ use JsonException;
 use MambuSRL\VerizonConnect\Exception\RevealApiException;
 use MambuSRL\VerizonConnect\Http\CurlHttpClient;
 use MambuSRL\VerizonConnect\Http\HttpClientInterface;
-use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleLocation;
 use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleStatus;
 use MambuSRL\VerizonConnect\Model\GpsHistoryByVehicleNumberResponse;
+use MambuSRL\VerizonConnect\Model\Location;
 use MambuSRL\VerizonConnect\Model\VehicleDTCHistory;
 use MambuSRL\VerizonConnect\Model\VehicleECMStatus;
 use MambuSRL\VerizonConnect\Model\Vehicle;
@@ -189,7 +189,7 @@ final class RevealClient
      * Returns the current locations for the provided vehicle numbers.
      *
      * @param array<int, string> $vehicleNumbers
-    * @return array<int, ContentResourceByVehicleNumberVehicleLocation>
+        * @return array<int, Location>
      */
     public function getVehiclesLocations(string $token, array $vehicleNumbers): array
     {
@@ -213,7 +213,7 @@ final class RevealClient
 
         return $this->mapList(
             $this->decodeJson($response->body, 'vehicles locations'),
-            static fn (array $item): ContentResourceByVehicleNumberVehicleLocation => ContentResourceByVehicleNumberVehicleLocation::fromArray($item),
+            fn (array $item): Location => Location::fromVehicleLocationArray($this->extractBulkVehicleLocationValue($item)),
             'vehicles locations'
         );
     }
@@ -370,6 +370,25 @@ final class RevealClient
         }
 
         return $payload;
+    }
+
+    /**
+     * @param array<mixed> $payload
+     * @return array<mixed>
+     */
+    private function extractBulkVehicleLocationValue(array $payload): array
+    {
+        $contentResource = $payload['ContentResource'] ?? null;
+        if (!is_array($contentResource)) {
+            throw new RevealApiException('Unexpected vehicles locations response format');
+        }
+
+        $value = $contentResource['Value'] ?? null;
+        if (!is_array($value)) {
+            throw new RevealApiException('Unexpected vehicles locations response format');
+        }
+
+        return $value;
     }
 
     /**

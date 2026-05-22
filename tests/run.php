@@ -20,9 +20,9 @@ require_once __DIR__ . '/../src/RevealClient.php';
 use MambuSRL\VerizonConnect\Exception\RevealApiException;
 use MambuSRL\VerizonConnect\Http\HttpClientInterface;
 use MambuSRL\VerizonConnect\Http\HttpResponse;
-use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleLocation;
 use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleStatus;
 use MambuSRL\VerizonConnect\Model\GpsHistoryByVehicleNumberResponse;
+use MambuSRL\VerizonConnect\Model\Location;
 use MambuSRL\VerizonConnect\Model\Vehicle;
 use MambuSRL\VerizonConnect\Model\VehicleDTCHistory;
 use MambuSRL\VerizonConnect\Model\VehicleECMStatus;
@@ -152,13 +152,16 @@ function tests(): array
             );
         }],
         ['vehicle locations uses post endpoint with json body', function (): void {
-            $httpClient = new FakeHttpClient([new HttpResponse(200, '[{"VehicleNumber":"VH1"}]')]);
+            $httpClient = new FakeHttpClient([new HttpResponse(200, '[{"VehicleNumber":"VH1","ContentResource":{"Value":{"Latitude":45.1,"Longitude":11.2,"Address":{"AddressLine1":"Via Roma 1","Locality":"Torino","AdministrativeArea":"TO","PostalCode":"10100","Country":"IT"}},"StatusCode":200}}]')]);
             $client = new RevealClient(config(), $httpClient);
 
             $locations = $client->getVehiclesLocations('token-123', [' VH1 ', 'VH2']);
 
-            assertTrue($locations[0] instanceof ContentResourceByVehicleNumberVehicleLocation);
-            assertSame('VH1', $locations[0]->vehicleNumber);
+            assertTrue($locations[0] instanceof Location);
+            assertSame(45.1, $locations[0]->latitude);
+            assertSame(11.2, $locations[0]->longitude);
+            assertSame('Via Roma 1', $locations[0]->addressLine1);
+            assertSame('Torino', $locations[0]->locality);
             assertSame('POST', $httpClient->requests[0]['method']);
             assertSame(radUrl('/vehicles/locations'), $httpClient->requests[0]['url']);
             assertSame('application/json', $httpClient->requests[0]['headers']['Content-Type']);
