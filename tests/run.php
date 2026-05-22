@@ -95,6 +95,40 @@ function tests(): array
             assertSame(['lat' => 1.1, 'lng' => 2.2], $location);
             assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH%201%2F2/location', $httpClient->requests[0]['url']);
         }],
+        ['vehicle history uses history endpoint with query parameters', function (): void {
+            $httpClient = new FakeHttpClient([new HttpResponse(200, '{"items":[{"id":1}]}')]);
+            $client = new RevealClient(config(), $httpClient);
+
+            $history = $client->getVehicleHistory(
+                'token-123',
+                'VH 1/2',
+                '2026-05-22T00:00:00Z',
+                '2026-05-22T23:59:59Z'
+            );
+
+            assertSame(['items' => [['id' => 1]]], $history);
+            assertSame(
+                'https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH%201%2F2/status/history?startdatetimeutc=2026-05-22T00%3A00%3A00Z&enddatetimeutc=2026-05-22T23%3A59%3A59Z',
+                $httpClient->requests[0]['url']
+            );
+            assertSame(
+                'Atmosphere atmosphere_app_id=app-id, Bearer token-123',
+                $httpClient->requests[0]['headers']['Authorization']
+            );
+        }],
+        ['active dtcs uses dedicated endpoint and authorization header', function (): void {
+            $httpClient = new FakeHttpClient([new HttpResponse(200, '[{"VehicleNumber":"VH1","ActiveDTCs":"P0001"}]')]);
+            $client = new RevealClient(config(), $httpClient);
+
+            $activeDtcs = $client->getVehiclesActiveDTCS('token-123');
+
+            assertSame([['VehicleNumber' => 'VH1', 'ActiveDTCs' => 'P0001']], $activeDtcs);
+            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/getvehiclesactivedtcs', $httpClient->requests[0]['url']);
+            assertSame(
+                'Atmosphere atmosphere_app_id=app-id, Bearer token-123',
+                $httpClient->requests[0]['headers']['Authorization']
+            );
+        }],
         ['empty vehicle number is rejected', function (): void {
             $httpClient = new FakeHttpClient([]);
             $client = new RevealClient(config(), $httpClient);

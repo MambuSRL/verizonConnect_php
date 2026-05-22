@@ -95,6 +95,67 @@ final class RevealClient
     }
 
     /**
+     * Returns the GPS history of the vehicle identified by the vehicle number.
+     *
+     * @return array<mixed>
+     */
+    public function getVehicleHistory(
+        string $token,
+        string $vehicleNumber,
+        string $startDatetimeUtc,
+        string $endDatetimeUtc
+    ): array {
+        $vehicleNumber = trim($vehicleNumber);
+        if ($vehicleNumber === '') {
+            throw new RevealApiException('Vehicle number is required');
+        }
+
+        $startDatetimeUtc = trim($startDatetimeUtc);
+        if ($startDatetimeUtc === '') {
+            throw new RevealApiException('Start datetime UTC is required');
+        }
+
+        $endDatetimeUtc = trim($endDatetimeUtc);
+        if ($endDatetimeUtc === '') {
+            throw new RevealApiException('End datetime UTC is required');
+        }
+
+        $url = rtrim($this->config->radBaseUrl, '/')
+            . '/vehicles/'
+            . rawurlencode($vehicleNumber)
+            . '/status/history?startdatetimeutc='
+            . rawurlencode($startDatetimeUtc)
+            . '&enddatetimeutc='
+            . rawurlencode($endDatetimeUtc);
+
+        $response = $this->httpClient->request('GET', $url, [
+            'Accept' => 'application/json',
+            'Authorization' => $this->buildBearerAuthorization($token),
+        ]);
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return $this->decodeJson($response->body, 'vehicle history');
+    }
+
+    /**
+     * Returns the list of vehicles with active DTCs.
+     *
+     * @return array<mixed>
+     */
+    public function getVehiclesActiveDTCS(string $token): array
+    {
+        $response = $this->httpClient->request('GET', rtrim($this->config->radBaseUrl, '/') . '/vehicles/getvehiclesactivedtcs', [
+            'Accept' => 'application/json',
+            'Authorization' => $this->buildBearerAuthorization($token),
+        ]);
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return $this->decodeJson($response->body, 'vehicles active dtcs');
+    }
+
+    /**
         * Builds the Bearer authorization header required by the VerizonConnect APIs.
      */
     private function buildBearerAuthorization(string $token): string
