@@ -1,0 +1,23 @@
+{
+  "name": "mambusrl/verizonconnect-php",
+  "description": "PHP 8.3 client for Verizon Reveal API",
+  "type": "library",
+  "require": {
+    "php": "^8.3",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "MambuSRL\\VerizonConnect\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "MambuSRL\\VerizonConnect\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "php tests/run.php"
+  }
+}
