@@ -16,7 +16,7 @@ final class CurlHttpClient implements HttpClientInterface
     /**
         * Executes an HTTP request via cURL and returns the status code and body.
      */
-    public function request(string $method, string $url, array $headers = []): HttpResponse
+    public function request(string $method, string $url, array $headers = [], ?string $body = null): HttpResponse
     {
         $ch = curl_init();
 
@@ -36,6 +36,10 @@ final class CurlHttpClient implements HttpClientInterface
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 30,
         ]);
+
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
 
         $body = curl_exec($ch);
 

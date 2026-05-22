@@ -13,6 +13,14 @@ use JsonException;
 use MambuSRL\VerizonConnect\Exception\RevealApiException;
 use MambuSRL\VerizonConnect\Http\CurlHttpClient;
 use MambuSRL\VerizonConnect\Http\HttpClientInterface;
+use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleLocation;
+use MambuSRL\VerizonConnect\Model\ContentResourceByVehicleNumberVehicleStatus;
+use MambuSRL\VerizonConnect\Model\GpsHistoryByVehicleNumberResponse;
+use MambuSRL\VerizonConnect\Model\VehicleDTCHistory;
+use MambuSRL\VerizonConnect\Model\VehicleECMStatus;
+use MambuSRL\VerizonConnect\Model\VehicleLocation;
+use MambuSRL\VerizonConnect\Model\VehicleStatus;
+use MambuSRL\VerizonConnect\Model\VehiclesActiveDTC;
 
 final class RevealClient
 {
@@ -71,14 +79,11 @@ final class RevealClient
     /**
      * Returns the GPS location of the vehicle identified by the vehicle number.
      *
-     * @return array<mixed>
+     * @return VehicleLocation
      */
-    public function getVehicleLocation(string $token, string $vehicleNumber): array
+    public function getVehicleLocation(string $token, string $vehicleNumber): VehicleLocation
     {
-        $vehicleNumber = trim($vehicleNumber);
-        if ($vehicleNumber === '') {
-            throw new RevealApiException('Vehicle number is required');
-        }
+        $vehicleNumber = $this->normalizeVehicleNumber($vehicleNumber);
 
         $response = $this->httpClient->request(
             'GET',
@@ -91,13 +96,18 @@ final class RevealClient
 
         $this->assertSuccess($response->statusCode, $response->body);
 
-        return $this->decodeJson($response->body, 'vehicle location');
+        return VehicleLocation::fromArray(
+            $this->expectObjectPayload(
+                $this->decodeJson($response->body, 'vehicle location'),
+                'vehicle location'
+            )
+        );
     }
 
     /**
      * Returns the GPS history of the vehicle identified by the vehicle number.
      *
-     * @return array<mixed>
+    * @return array<int, GpsHistoryByVehicleNumberResponse>
      */
     public function getVehicleHistory(
         string $token,
@@ -105,10 +115,7 @@ final class RevealClient
         string $startDatetimeUtc,
         string $endDatetimeUtc
     ): array {
-        $vehicleNumber = trim($vehicleNumber);
-        if ($vehicleNumber === '') {
-            throw new RevealApiException('Vehicle number is required');
-        }
+        $vehicleNumber = $this->normalizeVehicleNumber($vehicleNumber);
 
         $startDatetimeUtc = trim($startDatetimeUtc);
         if ($startDatetimeUtc === '') {
@@ -135,13 +142,17 @@ final class RevealClient
 
         $this->assertSuccess($response->statusCode, $response->body);
 
-        return $this->decodeJson($response->body, 'vehicle history');
+        return $this->mapList(
+            $this->decodeJson($response->body, 'vehicle history'),
+            static fn (array $item): GpsHistoryByVehicleNumberResponse => GpsHistoryByVehicleNumberResponse::fromArray($item),
+            'vehicle history'
+        );
     }
 
     /**
      * Returns the list of vehicles with active DTCs.
      *
-     * @return array<mixed>
+    * @return array<int, VehiclesActiveDTC>
      */
     public function getVehiclesActiveDTCS(string $token): array
     {
@@ -152,7 +163,198 @@ final class RevealClient
 
         $this->assertSuccess($response->statusCode, $response->body);
 
-        return $this->decodeJson($response->body, 'vehicles active dtcs');
+        return $this->mapList(
+            $this->decodeJson($response->body, 'vehicles active dtcs'),
+            static fn (array $item): VehiclesActiveDTC => VehiclesActiveDTC::fromArray($item),
+            'vehicles active dtcs'
+        );
+    }
+
+    /**
+     * Returns the current locations for the provided vehicle numbers.
+     *
+     * @param array<int, string> $vehicleNumbers
+    * @return array<int, ContentResourceByVehicleNumberVehicleLocation>
+     */
+    public function getVehiclesLocations(string $token, array $vehicleNumbers): array
+    {
+        $requestBody = $this->encodeJson(
+            $this->normalizeVehicleNumbers($vehicleNumbers),
+            'vehicles locations request'
+        );
+
+        $response = $this->httpClient->request(
+            'POST',
+            rtrim($this->config->radBaseUrl, '/') . '/vehicles/locations',
+            [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => $this->buildBearerAuthorization($token),
+            ],
+            $requestBody
+        );
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return $this->mapList(
+            $this->decodeJson($response->body, 'vehicles locations'),
+            static fn (array $item): ContentResourceByVehicleNumberVehicleLocation => ContentResourceByVehicleNumberVehicleLocation::fromArray($item),
+            'vehicles locations'
+        );
+    }
+
+    /**
+     * Returns the current statuses for the provided vehicle numbers.
+     *
+     * @param array<int, string> $vehicleNumbers
+    * @return array<int, ContentResourceByVehicleNumberVehicleStatus>
+     */
+    public function getVehiclesStatuses(string $token, array $vehicleNumbers): array
+    {
+        $requestBody = $this->encodeJson(
+            $this->normalizeVehicleNumbers($vehicleNumbers),
+            'vehicles statuses request'
+        );
+
+        $response = $this->httpClient->request(
+            'POST',
+            rtrim($this->config->radBaseUrl, '/') . '/vehicles/statuses',
+            [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => $this->buildBearerAuthorization($token),
+            ],
+            $requestBody
+        );
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return $this->mapList(
+            $this->decodeJson($response->body, 'vehicles statuses'),
+            static fn (array $item): ContentResourceByVehicleNumberVehicleStatus => ContentResourceByVehicleNumberVehicleStatus::fromArray($item),
+            'vehicles statuses'
+        );
+    }
+
+    /**
+     * Returns ECM status details for the specified vehicle.
+     *
+    * @return VehicleECMStatus
+     */
+    public function getVehicleEcmStatus(string $token, string $vehicleNumber): VehicleECMStatus
+    {
+        $vehicleNumber = $this->normalizeVehicleNumber($vehicleNumber);
+
+        $response = $this->httpClient->request(
+            'GET',
+            rtrim($this->config->radBaseUrl, '/') . '/vehicles/' . rawurlencode($vehicleNumber) . '/getecmstatusbyvehiclenumber',
+            [
+                'Accept' => 'application/json',
+                'Authorization' => $this->buildBearerAuthorization($token),
+            ]
+        );
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return VehicleECMStatus::fromArray(
+            $this->expectObjectPayload(
+                $this->decodeJson($response->body, 'vehicle ecm status'),
+                'vehicle ecm status'
+            )
+        );
+    }
+
+    /**
+     * Returns DTC history for the specified vehicle.
+     *
+    * @return VehicleDTCHistory
+     */
+    public function getVehicleDtcHistory(string $token, string $vehicleNumber): VehicleDTCHistory
+    {
+        $vehicleNumber = $this->normalizeVehicleNumber($vehicleNumber);
+
+        $response = $this->httpClient->request(
+            'GET',
+            rtrim($this->config->radBaseUrl, '/') . '/vehicles/' . rawurlencode($vehicleNumber) . '/getdtchistorybyvehiclenumber',
+            [
+                'Accept' => 'application/json',
+                'Authorization' => $this->buildBearerAuthorization($token),
+            ]
+        );
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return VehicleDTCHistory::fromArray(
+            $this->expectObjectPayload(
+                $this->decodeJson($response->body, 'vehicle dtc history'),
+                'vehicle dtc history'
+            )
+        );
+    }
+
+    /**
+     * Returns status information for the specified vehicle.
+     *
+    * @return VehicleStatus
+     */
+    public function getVehicleStatus(string $token, string $vehicleNumber): VehicleStatus
+    {
+        $vehicleNumber = $this->normalizeVehicleNumber($vehicleNumber);
+
+        $response = $this->httpClient->request(
+            'GET',
+            rtrim($this->config->radBaseUrl, '/') . '/vehicles/' . rawurlencode($vehicleNumber) . '/status',
+            [
+                'Accept' => 'application/json',
+                'Authorization' => $this->buildBearerAuthorization($token),
+            ]
+        );
+
+        $this->assertSuccess($response->statusCode, $response->body);
+
+        return VehicleStatus::fromArray(
+            $this->expectObjectPayload(
+                $this->decodeJson($response->body, 'vehicle status'),
+                'vehicle status'
+            )
+        );
+    }
+
+    /**
+     * @template T
+     * @param array<mixed> $payload
+     * @param callable(array<mixed>): T $mapper
+     * @return array<int, T>
+     */
+    private function mapList(array $payload, callable $mapper, string $context): array
+    {
+        if (!array_is_list($payload)) {
+            throw new RevealApiException(sprintf('Unexpected %s response format', $context));
+        }
+
+        $mapped = [];
+        foreach ($payload as $item) {
+            if (!is_array($item)) {
+                throw new RevealApiException(sprintf('Unexpected %s response format', $context));
+            }
+
+            $mapped[] = $mapper($item);
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * @param array<mixed> $payload
+     * @return array<mixed>
+     */
+    private function expectObjectPayload(array $payload, string $context): array
+    {
+        if (array_is_list($payload)) {
+            throw new RevealApiException(sprintf('Unexpected %s response format', $context));
+        }
+
+        return $payload;
     }
 
     /**
@@ -177,6 +379,57 @@ final class RevealClient
             throw new RevealApiException(
                 sprintf('Reveal API request failed with status %d: %s', $statusCode, $body),
                 $statusCode
+            );
+        }
+    }
+
+    /**
+     * Validates and normalizes a single vehicle number.
+     */
+    private function normalizeVehicleNumber(string $vehicleNumber): string
+    {
+        $vehicleNumber = trim($vehicleNumber);
+        if ($vehicleNumber === '') {
+            throw new RevealApiException('Vehicle number is required');
+        }
+
+        return $vehicleNumber;
+    }
+
+    /**
+     * Validates and normalizes a list of vehicle numbers.
+     *
+     * @param array<int, string> $vehicleNumbers
+     * @return array<int, string>
+     */
+    private function normalizeVehicleNumbers(array $vehicleNumbers): array
+    {
+        if ($vehicleNumbers === []) {
+            throw new RevealApiException('At least one vehicle number is required');
+        }
+
+        $normalizedVehicleNumbers = [];
+        foreach ($vehicleNumbers as $vehicleNumber) {
+            if (!is_string($vehicleNumber)) {
+                throw new RevealApiException('Vehicle numbers must be strings');
+            }
+
+            $normalizedVehicleNumbers[] = $this->normalizeVehicleNumber($vehicleNumber);
+        }
+
+        return $normalizedVehicleNumbers;
+    }
+
+    /**
+     * Encodes data to JSON and wraps encoding errors in domain exceptions.
+     */
+    private function encodeJson(array $data, string $context): string
+    {
+        try {
+            return json_encode($data, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RevealApiException(
+                sprintf('Unable to encode %s: %s', $context, $exception->getMessage())
             );
         }
     }
