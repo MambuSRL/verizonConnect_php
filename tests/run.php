@@ -107,7 +107,7 @@ function tests(): array
             assertTrue($location instanceof VehicleLocation);
             assertSame(1.1, $location->latitude);
             assertSame(2.2, $location->longitude);
-            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH%201%2F2/location', $httpClient->requests[0]['url']);
+            assertSame(radUrl('/vehicles/VH%201%2F2/location'), $httpClient->requests[0]['url']);
         }],
         ['vehicle history uses history endpoint with query parameters', function (): void {
             $httpClient = new FakeHttpClient([new HttpResponse(200, '[{"VehicleNumber":"VH1","Latitude":45.1,"Longitude":11.2}]')]);
@@ -124,7 +124,7 @@ function tests(): array
             assertSame('VH1', $history[0]->vehicleNumber);
             assertSame(45.1, $history[0]->latitude);
             assertSame(
-                'https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH%201%2F2/status/history?startdatetimeutc=2026-05-22T00%3A00%3A00Z&enddatetimeutc=2026-05-22T23%3A59%3A59Z',
+                radUrl('/vehicles/VH%201%2F2/status/history?startdatetimeutc=2026-05-22T00%3A00%3A00Z&enddatetimeutc=2026-05-22T23%3A59%3A59Z'),
                 $httpClient->requests[0]['url']
             );
             assertSame(
@@ -141,7 +141,7 @@ function tests(): array
             assertTrue($activeDtcs[0] instanceof VehiclesActiveDTC);
             assertSame('VH1', $activeDtcs[0]->vehicleNumber);
             assertSame('P0001', $activeDtcs[0]->activeDTCs);
-            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/getvehiclesactivedtcs', $httpClient->requests[0]['url']);
+            assertSame(radUrl('/vehicles/getvehiclesactivedtcs'), $httpClient->requests[0]['url']);
             assertSame(
                 'Atmosphere atmosphere_app_id=app-id, Bearer token-123',
                 $httpClient->requests[0]['headers']['Authorization']
@@ -156,7 +156,7 @@ function tests(): array
             assertTrue($locations[0] instanceof ContentResourceByVehicleNumberVehicleLocation);
             assertSame('VH1', $locations[0]->vehicleNumber);
             assertSame('POST', $httpClient->requests[0]['method']);
-            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/locations', $httpClient->requests[0]['url']);
+            assertSame(radUrl('/vehicles/locations'), $httpClient->requests[0]['url']);
             assertSame('application/json', $httpClient->requests[0]['headers']['Content-Type']);
             assertSame('["VH1","VH2"]', $httpClient->requests[0]['body']);
         }],
@@ -169,7 +169,7 @@ function tests(): array
             assertTrue($statuses[0] instanceof ContentResourceByVehicleNumberVehicleStatus);
             assertSame('VH1', $statuses[0]->vehicleNumber);
             assertSame('POST', $httpClient->requests[0]['method']);
-            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/statuses', $httpClient->requests[0]['url']);
+            assertSame(radUrl('/vehicles/statuses'), $httpClient->requests[0]['url']);
             assertSame('["VH1"]', $httpClient->requests[0]['body']);
         }],
         ['vehicle ecm status uses dedicated endpoint', function (): void {
@@ -181,7 +181,7 @@ function tests(): array
             assertTrue($ecmStatus instanceof VehicleECMStatus);
             assertSame('P0001', $ecmStatus->dtcs);
             assertSame(
-                'https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH%201%2F2/getecmstatusbyvehiclenumber',
+                radUrl('/vehicles/VH%201%2F2/getecmstatusbyvehiclenumber'),
                 $httpClient->requests[0]['url']
             );
         }],
@@ -194,7 +194,7 @@ function tests(): array
             assertTrue($dtcHistory instanceof VehicleDTCHistory);
             assertSame('VH1', $dtcHistory->vehicleNumber);
             assertSame(
-                'https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH1/getdtchistorybyvehiclenumber',
+                radUrl('/vehicles/VH1/getdtchistorybyvehiclenumber'),
                 $httpClient->requests[0]['url']
             );
         }],
@@ -206,7 +206,7 @@ function tests(): array
 
             assertTrue($status instanceof VehicleStatus);
             assertSame('Driving', $status->displayState);
-            assertSame('https://fim.api.eu.fleetmatics.com/rad/v1/vehicles/VH1/status', $httpClient->requests[0]['url']);
+            assertSame(radUrl('/vehicles/VH1/status'), $httpClient->requests[0]['url']);
         }],
         ['empty vehicle list is rejected for bulk endpoints', function (): void {
             $httpClient = new FakeHttpClient([]);
@@ -243,6 +243,11 @@ function config(): RevealConfig
         username: 'user',
         password: 'pass'
     );
+}
+
+function radUrl(string $path): string
+{
+    return rtrim(RevealConfig::RAD_API_BASE_URL, '/') . '/' . ltrim($path, '/');
 }
 
 /**

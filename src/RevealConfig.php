@@ -11,6 +11,8 @@ namespace MambuSRL\VerizonConnect;
 
 final class RevealConfig
 {
+    public const RAD_API_BASE_URL = 'https://fim.api.eu.fleetmatics.com/rad/v1/';
+
     /**
         * Initializes the connection parameters and VerizonConnect endpoints.
      */
@@ -20,7 +22,7 @@ final class RevealConfig
         public readonly string $password,
         public readonly string $tokenUrl = 'https://fim.api.eu.fleetmatics.com/token',
         public readonly string $cmdBaseUrl = 'https://fim.api.eu.fleetmatics.com/cmd/v1',
-        public readonly string $radBaseUrl = 'https://fim.api.eu.fleetmatics.com/rad/v1'
+        public readonly string $radBaseUrl = self::RAD_API_BASE_URL
     ) {
     }
 }
