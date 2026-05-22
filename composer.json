@@ -7,6 +7,13 @@
     "ext-curl": "*",
     "ext-json": "*"
   },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "MambuSRL",
+      "email": "info@mambu.it"
+    }
+  ],
   "autoload": {
     "psr-4": {
       "MambuSRL\\VerizonConnect\\": "src/"
