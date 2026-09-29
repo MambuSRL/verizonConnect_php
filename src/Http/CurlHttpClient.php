@@ -45,12 +45,10 @@ final class CurlHttpClient implements HttpClientInterface
 
         if ($body === false) {
             $error = curl_error($ch);
-            curl_close($ch);
             throw new RevealApiException(sprintf('HTTP request failed: %s', $error));
         }
 
         $statusCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        curl_close($ch);
 
         return new HttpResponse($statusCode, $body);
     }
